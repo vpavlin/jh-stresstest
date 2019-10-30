@@ -1,0 +1,44 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: jh-stresstest-6
+  labels:
+    job-name: jh-stresstest
+  annotations:
+    alpha.image.policy.openshift.io/resolve-names: '*'
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 2
+  template:
+    metadata:
+      name: jh-stresstest
+    spec:
+      containers:
+        - name: jh-stresstest
+          image: >-
+            image-registry.openshift-image-registry.svc:5000/odh-admin/jh-stresstest
+          env:
+            - name: JH_HEADLESS
+              value: 'true'
+            - name: JH_USER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: JH_LOGIN_USER
+              value: "someuser"
+            - name: JH_LOGIN_PASS
+              value: "somepass"
+            - name: JH_NOTEBOOKS
+              value: test.ipynb
+            - name: JH_AS_ADMIN
+              value: "true"
+            - name: JH_URL
+              value: >-
+                "https://jupyterhub.example.com"
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Never
+status:

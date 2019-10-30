@@ -1,0 +1,39 @@
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    build: jh-stresstest
+  name: jh-stresstest
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: jh-stresstest:latest
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    git:
+      uri: https://github.com/vpavlin/jh-stresstest
+    type: Git
+  strategy:
+    sourceStrategy:
+      from:
+        kind: DockerImage
+        name: quay.io/vpavlin/jh-stresstest-base
+    type: Source
+  successfulBuildsHistoryLimit: 5
+  triggers:
+  - type: ConfigChange
+status:
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    build: jh-stresstest
+  name: jh-stresstest
+spec:
+  lookupPolicy:
+    local: true
