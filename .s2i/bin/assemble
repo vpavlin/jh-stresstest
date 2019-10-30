@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+
+echo "Running main assemble"
+/usr/libexec/s2i/assemble
+
+echo "Getting Chromedriver"
+curl -OL https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_linux64.zip
+unzip chromedriver_linux64.zip
+cp chromedriver /opt/app-root/bin/chromedriver
