@@ -24,6 +24,10 @@ class JHStress():
         chrome_options = Options()  
         if self.headless:
             chrome_options.add_argument("--headless")
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--window-size=1420,1080')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--disable-dev-shm-usage')
         self.driver = webdriver.Chrome(chrome_options=chrome_options)
         self.driver.get(self.url)
         self.action = ActionChains(self.driver)
@@ -155,6 +159,12 @@ class JHStress():
         size_select = Select(self.driver.find_element(By.XPATH, '//select[@name="size"]'))
         size_select.select_by_value(self.spawner["size"])
 
+        env_name = self.driver.find_element(By.XPATH, '//input[@name="variable_name_1"]')
+        env_name.send_keys("JUPYTER_PRELOAD_REPOS")
+
+        env_value = self.driver.find_element(By.XPATH, '//input[@name="variable_value_1"]')
+        env_value.send_keys("https://github.com/vpavlin/jh-stresstest")
+
         spawn_elem = self.driver.find_element(By.XPATH, '//input[@value="Spawn"]')
         spawn_elem.click()
 
@@ -167,13 +177,12 @@ class JHStress():
         stop_elem.click()
 
     def run_notebook(self, notebook, tab):
-        try:
-            w = WebDriverWait(self.driver, 10)
-            element = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % notebook)))
-        except Exception as e:
-            _LOGGER.error(e)
+        w = WebDriverWait(self.driver, 10)
+        dir_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="jh-stresstest"]')))
+        dir_elem.click()
 
-        notebook_elem = self.driver.find_element(By.XPATH, '//span[text()="%s"]' % notebook)
+        w = WebDriverWait(self.driver, 10)
+        notebook_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % notebook)))
         notebook_elem.click()
 
         #Switch to new tab
@@ -222,7 +231,7 @@ if __name__ == "__main__":
 
     #jhs.login()
     #jhs.run_all_cells()
-    jhs.quit()
+    #jhs.quit()
 
 #print(driver.page_source)
 
