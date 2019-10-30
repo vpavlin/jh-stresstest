@@ -34,7 +34,7 @@ class JHStress():
         self.url = os.environ.get('JH_URL')
         self.username = os.environ.get('JH_LOGIN_USER')
         self.password = os.environ.get('JH_LOGIN_PASS')
-        self.notebooks = os.environ.get('JH_NOTEBOOKS', []).split(",")
+        self.notebooks = os.environ.get('JH_NOTEBOOKS', "").split(",")
         self.user_name = os.environ.get('JH_USER_NAME', 'test-user1')
         self.spawner = {
             "image": os.environ.get('JH_NOTEBOOK_IMAGE', "s2i-minimal-notebook:3.6"),
