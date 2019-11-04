@@ -10,6 +10,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.select import Select
 
+from selenium.common.exceptions import NoSuchElementException
+
 
 import time
 
@@ -46,6 +48,7 @@ class JHStress():
         }
         self.as_admin = os.environ.get('JH_AS_ADMIN', False)
         self.headless = os.environ.get('JH_HEADLESS', False)
+        self.preload_repos = os.environ.get('JH_PRELOAD_REPOS', "https://github.com/vpavlin/jh-stresstest")
 
 
         if not self.url:
@@ -64,10 +67,17 @@ class JHStress():
         login_elem = self.driver.find_element(By.XPATH, '//button[text()="Log In"]')
         login_elem.send_keys(Keys.RETURN)
 
-    def admin_add_user(self):
+    def go_to_admin(self):
+        if not self.check_exists_by_xpath("//a[@href='/hub/admin']"):
+            w = WebDriverWait(self.driver, 5)
+            cp_elem = w.until(EC.element_to_be_clickable((By.XPATH, "//a[@href='/hub/home']")))
+            cp_elem.click()
         admin_elem = self.driver.find_element_by_link_text("Admin")
         admin_elem.click()
         _LOGGER.info("Admin console")
+
+    def admin_add_user(self):
+        self.go_to_admin()
 
         user_elem = None
         try:
@@ -106,9 +116,7 @@ class JHStress():
         start_elem.click()
 
     def admin_del_user(self):
-        self.driver.get(self.url+ "/hub/home")
-        admin_elem = self.driver.find_element_by_link_text("Admin")
-        admin_elem.click()
+        self.go_to_admin()
 
         try:
             w = WebDriverWait(self.driver, 5)
@@ -163,12 +171,12 @@ class JHStress():
         env_name.send_keys("JUPYTER_PRELOAD_REPOS")
 
         env_value = self.driver.find_element(By.XPATH, '//input[@name="variable_value_1"]')
-        env_value.send_keys("https://github.com/vpavlin/jh-stresstest")
+        env_value.send_keys(self.preload_repos)
 
         spawn_elem = self.driver.find_element(By.XPATH, '//input[@value="Spawn"]')
         spawn_elem.click()
 
-        w = WebDriverWait(self.driver, 120)
+        w = WebDriverWait(self.driver, 180)
         element = w.until(EC.presence_of_element_located((By.ID, 'notebook_list_header')))
     
     def stop(self):
@@ -177,12 +185,15 @@ class JHStress():
         stop_elem.click()
 
     def run_notebook(self, notebook, tab):
-        w = WebDriverWait(self.driver, 10)
-        dir_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="jh-stresstest"]')))
-        dir_elem.click()
+        path = notebook.split("/")
+        if len(path) > 1:
+            for segment in path[:-1]:
+                w = WebDriverWait(self.driver, 10)
+                dir_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % segment)))
+                dir_elem.click()
 
         w = WebDriverWait(self.driver, 10)
-        notebook_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % notebook)))
+        notebook_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % path[-1])))
         notebook_elem.click()
 
         #Switch to new tab
@@ -194,7 +205,7 @@ class JHStress():
 
     def run_all_cells(self):
         try:
-            w = WebDriverWait(self.driver, 20)
+            w = WebDriverWait(self.driver, 30)
             element = w.until(EC.presence_of_element_located((By.XPATH, '//i[@id="kernel_indicator_icon"][@title="Kernel Idle"]')))
         except Exception as e:
             _LOGGER.error(e)
@@ -210,18 +221,33 @@ class JHStress():
         clear_elem = self.driver.find_element_by_id("clear_all_output")
         clear_elem.click()
 
-
         self.click_menu("Cell")
         self.click_menu("Run All")
 
-        end_of_notebook = "End Of Notebook"
+        cells = self.driver.find_elements(By.XPATH, '//div[contains(@class, "cell code_cell")]')
 
-        wait = WebDriverWait(self.driver, 60)
-        end_elem = wait.until(EC.presence_of_element_located((By.XPATH, '//pre[contains(text(), "%s")]' % end_of_notebook)))
-        _LOGGER.info("Reached a cell with content %s" % end_of_notebook)
+        last = len(cells)
+        wait_time = 180
+        retries = int(wait_time/2)
+        last_cell = None
+        for i in range(0, retries):
+            last_cell = self.driver.find_element(By.XPATH, '(//div[contains(@class, "cell code_cell")])[%d]//div[@class="prompt_container"]' % last)
+            if last_cell.text == "In [*]:" or last_cell.text == "In [ ]:":
+                time.sleep(2)
+            else:
+                break
+
+        _LOGGER.info("Reached last cell, execution numbering: '%s'" % last_cell.text)
 
     def quit(self):
         self.driver.quit()
+
+    def check_exists_by_xpath(self, xpath):
+        try:
+            self.driver.find_element_by_xpath(xpath)
+        except NoSuchElementException:
+            return False
+        return True
 
 
 if __name__ == "__main__":
