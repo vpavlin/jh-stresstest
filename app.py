@@ -192,6 +192,7 @@ class JHStress():
                 dir_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % segment)))
                 dir_elem.click()
 
+        _LOGGER.info("Executing notebook %s" % path[-1])
         w = WebDriverWait(self.driver, 10)
         notebook_elem = w.until(EC.presence_of_element_located((By.XPATH, '//span[text()="%s"]' % path[-1])))
         notebook_elem.click()
